@@ -1,4 +1,3 @@
-
 /************************************************************************************
  * @file BpTreeMap.java
  *
@@ -48,6 +47,9 @@ public class BpTreeMap <K extends Comparable <K>, V>
     /** The class for type V.
      */
     private final Class <V> classV;
+    
+    private K tempKey; 
+    //used to get keys for splitting and wedging. 
 
     /********************************************************************************
      * This inner class defines nodes that are stored in the B+tree map.
@@ -58,6 +60,7 @@ public class BpTreeMap <K extends Comparable <K>, V>
         int       nKeys;                              // number of active keys
         K []      key;                                // array of keys
         Object [] ref;                                // array of references/pointers
+         
 
         /****************************************************************************
          * Construct a node.
@@ -75,6 +78,8 @@ public class BpTreeMap <K extends Comparable <K>, V>
             } else {
                 ref = (Node []) Array.newInstance (Node.class, p);
             } // if
+            
+            tempKey = null; 
         } // constructor
 
         /****************************************************************************
@@ -123,7 +128,7 @@ public class BpTreeMap <K extends Comparable <K>, V>
     /** A big node to hold all keys and references/pointers before splitting
      */
     private final Node bn;
-    
+     
     /** Flag indicating whether a split at the level below has occurred that needs to be handled
      */
     private boolean hasSplit = false;
@@ -165,11 +170,46 @@ public class BpTreeMap <K extends Comparable <K>, V>
      */
     public Set <Map.Entry <K, V>> entrySet ()
     {
-        Set <Map.Entry <K, V>> enSet = new HashSet <> ();
-
-        //  T O   B E   I M P L E M E N T E D
-            
+    	Set <Map.Entry <K, V>> enSet = new HashSet <> ();
+    	    	
+    	Node temp = firstLeaf;
+    	boolean again = true;
+    	
+    	while(again){
+    		for(int i = 0; i < temp.nKeys; i++){
+    			Map.Entry<K, V> e = new AbstractMap.SimpleEntry(temp.key[i], (V)temp.ref[i]);
+    			enSet.add(e);
+    		}
+    		if(again){
+    			temp = (Node)temp.ref[temp.nKeys];
+    		}
+    		if(temp == null){
+    			again = false;
+    		}
+    	}
+    	/*
+    	K[] keys = (K []) Array.newInstance (classK, numKeys+leafKeys);
+    	Object[] ref = new Object[15];
+    	//Map.Entry<K,V> e = (Map.Entry<K, V>)new AbstractMap.SimpleEntry;//new Map.Entry<K,V>(0, null);
+    	//Map.Entry<K,V> e = (java.util.Map.Entry<K, V>) new AbstractMap.SimpleEntry<Integer, Integer>(numKeys+leafKeys,null);
+        
+    	HashMap hash = new HashMap();
+    	Node tempNode = new Node (keyCount, true);
+    	
+    	//test root
+    	for(int i = 0; i < numKeys; i++){
+        	keys[i] = (K)root.key[i];
+        	ref[i] = find((K) root.key[i], root);
+        	//System.out.println("KEY: " + keys[i]);
+        	//System.out.println("VALUE: " + ref[i]);
+        	
+        	hash.put(keys[i], ref[i]);
+        	//e.setValue((V)ref[i]);
+            //enSet.add(e);
+        }
+    	enSet = hash.entrySet();       */  
         return enSet;
+
     } // entrySet
 
     /********************************************************************************
@@ -205,48 +245,105 @@ public class BpTreeMap <K extends Comparable <K>, V>
     } // firstKey
 
     /********************************************************************************
+     * @author Fu
      * Return the last (largest) key in the B+Tree map.
      * @return  the last key in the B+Tree map.
      */
     public K lastKey () 
     {
-        //  T O   B E   I M P L E M E N T E D
-
-        return null;
+    	K tempKey = (K)(Integer) keyCount;
+    	Object temp = find(tempKey,root);
+    	
+    	return tempKey;
     } // lastKey
 
     /********************************************************************************
      * Return the portion of the B+Tree map where key < toKey.
      * @return  the submap with keys in the range [firstKey, toKey)
+     * @author Tan
      */
     public SortedMap <K,V> headMap (K toKey)
     {
-        //  T O   B E   I M P L E M E N T E D
-
-        return null;
+    	SortedMap hmap = new BpTreeMap(Comparable.class, Comparable.class);
+    	
+    	Node a = this.firstLeaf;
+    	boolean reloop = true;
+    	
+    	while(reloop == true){
+    		for(int i = 0; i < a.nKeys; i++){
+    			if(a.key[i].compareTo(toKey) >= 0){
+    				reloop = false;
+    			}
+    			if(reloop){
+    				hmap.put(a.key[i], (V)a.ref[i]);
+    			}
+    		}
+    		if(reloop){
+    			a = (Node)a.ref[a.nKeys];
+    		}
+    		if(a == null){
+    			reloop = false;
+    		}
+    	}
+        return hmap;
     } // headMap
 
     /********************************************************************************
      * Return the portion of the B+Tree map where fromKey <= key.
      * @return  the submap with keys in the range [fromKey, lastKey]
+     * @author Tan
      */
     public SortedMap <K,V> tailMap (K fromKey)
     {
-        //  T O   B E   I M P L E M E N T E D
+    	SortedMap tmap = new BpTreeMap(Comparable.class, Comparable.class);
+    	
+    	Node b = this.firstLeaf;
+    	boolean reloop = true;
+    	
+    	while(reloop == true){
+    		for(int i = 0; i < b.nKeys; i++){
+    			if(b.key[i].compareTo(fromKey) >= 0){
+    				tmap.put(b.key[i], (V)b.ref[i]);
+    			}
+    		}
+    		if(reloop){
+    			b = (Node)b.ref[b.nKeys];
+    		}
+    		if(b == null){
+    			reloop = false;
+    		}
+    	}
+        return tmap;
 
-        return null;
     } // tailMap
 
     /********************************************************************************
      * Return the portion of the B+Tree map whose keys are between fromKey and toKey,
      * i.e., fromKey <= key < toKey.
      * @return  the submap with keys in the range [fromKey, toKey)
+     * @author Tan
      */
     public SortedMap <K,V> subMap (K fromKey, K toKey)
     {
-        //  T O   B E   I M P L E M E N T E D
-
-        return null;
+    	SortedMap smap = new BpTreeMap(Comparable.class, Comparable.class);
+    	
+    	Node c = this.firstLeaf;
+    	boolean reloop = true;
+    	
+    	while(reloop == true){
+    		for(int i = 0; i < c.nKeys; i++){
+    			if(c.key[i].compareTo(fromKey) >= 0 && c.key[i].compareTo(toKey) <= 0 ){
+    				smap.put(c.key[i], (V)c.ref[i]);    			}
+    			
+    		}
+    		if(reloop){
+    			c = (Node)c.ref[c.nKeys];
+    		}
+    		if(c == null){
+    			reloop = false;
+    		}
+    	}
+        return smap;
     } // subMap
 
     /********************************************************************************
@@ -309,36 +406,114 @@ public class BpTreeMap <K extends Comparable <K>, V>
     @SuppressWarnings("unchecked")
     private Node insert (K key, V ref, Node n)
     {
-        out.println ("=============================================================");
+	        out.println ("=============================================================");
         out.println ("insert: key = " + key);
         out.println ("=============================================================");
 
-        Node rt = null;                                                      // holder for right sibling
+        Node rt = null;  
+        //rt = insert (key, ref, (Node)n.ref);
+        // holder for right sibling
         
-        if (n.isLeaf) {                                                      // handle leaf node level
+        //K tempKey = n.key[n.nKeys];
+        
+        
+        if (n.isLeaf) 
+        {                                                      // handle leaf node level
 
-            if (n.nKeys < ORDER - 1) {                                       // current node is not full
-                wedge (key, ref, n, n.find (key), true);                     // wedge (key, ref) pair in at position i
-            } else {                                                         // current node is full
-                rt = split (key, ref, n, true);                              // split current node, return right sibling
-                n.ref[n.nKeys] = rt;                                         // link leaf n to leaf rt
-                if (n == root && rt != null) {
+            if (n.nKeys < ORDER - 1) 
+            {                                      		  // current node is not full
+                wedge (key, ref, n, n.find (key), true);  // wedge (key, ref) pair in at position i
+                	//System.out.println("TEMP KEY " + key.toString() + " ref is " + ref.toString()); 
+                
+            } 
+            
+            else 
+            {                                                         		// current node is full
+                rt = split (key, ref, n, true); 							// split current node, return right sibling
+                n.ref[n.nKeys] = rt;                                        // link leaf n to leaf rt
+                if (n == root && rt != null) 
+                {
                     root = makeRoot (n, n.key[n.nKeys-1], rt);               // make a new root
-                } else if (rt != null) {
+                } 
+                
+                
+                else if (rt != null) 
+                {
                     hasSplit = true;                                         // indicate an unhandled split
                 } // if
             } // if
 
-        } else {                                                             // handle internal node level
+        } 
+        
+        
+        
+        else 
+        {                                                             // handle internal node level
 
-            int i = n.find (key);                                            // find "<=" position
-            rt = insert (key, ref, (Node) n.ref[i]);                         // recursive call to insert
-            if (DEBUG) out.println ("insert: handle internal node level");
+            int i = n.find (key); // find "<=" position 
+            
+            Node temp = (Node) n.ref[i];
+            //node that we are inserting into. 
+            
+            
+            rt = insert (key, ref, temp);
+            
+            
+             
+            //Node temp = null;
+           
+            //gets value to be wedged in. 
+            //K tempKey = n.key[n.nKeys]; 
+            
+           
+            //System.out.println(temp.toString()); 
+            
+            if (hasSplit == true)
+            {
 
-                //  T O   B E   I M P L E M E N T E D
+	            if( (n.nKeys < ORDER - 1))
+	            {
+	            	//handle non overflow case. 
+	            	System.out.println("Length is: " + temp.key.length); 
+	            	
+
+	                	wedge (tempKey, rt, n, n.find(tempKey), false); 
+	                	//adds value into node if not overflow. 
+	            	
+	                	hasSplit = false; 
+	            }
+	            
+	            else
+	            {
+	            	//handles cases of overflow. 
+	            	//very similar to prewritten code but had to make modificaitons to handle the non leaf cases. 
+	            	
+
+	            	
+	            	rt = split(tempKey, rt, n, true); 
+	            	//make split. 
+	            	
+	            	
+	            	if (n == root && rt != null)
+	            	{
+	            		root = makeRoot (n, tempKey, rt); 
+	            		n.nKeys-=1; 
+	            		//handle root case. 
+	            	}
+	            		
+	            	else if (rt != null)
+	            		hasSplit = true; 
+	            	
+	            	hasSplit = true; 
+ 
+	            }
+            }
+
 
         } // if
-
+/*
+ * 
+ */
         if (DEBUG) print (root, 0);
         return rt;                                                           // return right node
     } // insert
@@ -381,7 +556,10 @@ public class BpTreeMap <K extends Comparable <K>, V>
             if (left || j > i + 1) n.ref[j] = n.ref[j-1];             // make room: shift refs right
         } // for
         n.key[i] = key;                                               // place new key
-        if (left) n.ref[i] = ref; else n.ref[i+1] = ref;              // place new ref
+        if (left) 
+        	n.ref[i] = ref; 
+        else 
+        	n.ref[i+1] = ref;              // place new ref
         n.nKeys++;                                                    // increment number of keys
         return true;
     } // wedge
@@ -400,38 +578,98 @@ public class BpTreeMap <K extends Comparable <K>, V>
         if (wedge (key, ref, bn, bn.find (key), left)) {                  // if wedge (key, ref) into big node was successful
             n.copy (bn, 0, MID);                                          // copy back first half to node n
             Node rt = new Node (ORDER, n.isLeaf);                         // make a right sibling node (rt)
-            rt.copy (bn, MID, ORDER-MID);                                 // copy second to node rt    
+            rt.copy (bn, MID, ORDER-MID);                                 // copy second to node rt  
+            updateTempKey(n); 
             return rt;                                                    // return right sibling
         } // if     
         return null;                                                      // no new node created as key is duplicate
     } // split
 
+    private K updateTempKey(Node n)
+    {
+    		if (n.key != null)
+    			tempKey = n.key[n.nKeys]; 
+    		
+    		return tempKey; 
+    		
+    		//used to update the key 
+    }
+	
+	
     /********************************************************************************
      * The main method used for testing.
      * @param  the command-line arguments (args[0] gives number of keys to insert)
      */
     public static void main (String [] args)
     {
-        int totalKeys    = 14;                    
+        int totalKeys    = 21;                    
         boolean RANDOMLY = false;
 
         BpTreeMap <Integer, Integer> bpt = new BpTreeMap <> (Integer.class, Integer.class);
-        if (args.length == 1) totalKeys = Integer.valueOf (args[0]);
+        if (args.length == 1) 
+        	totalKeys = Integer.valueOf (args[0]);
    
-        if (RANDOMLY) {
+        if (RANDOMLY) 
+        {
             Random rng = new Random ();
-            for (int i = 1; i <= totalKeys; i += 2) bpt.put (rng.nextInt (2 * totalKeys), i * i);
-        } else {
-            for (int i = 1; i <= totalKeys; i += 2) bpt.put (i, i * i);
+            for (int i = 1; i <= totalKeys; i += 2) 
+            	bpt.put (rng.nextInt (2 * totalKeys), i * i);
+        } 
+        
+        else 
+        {
+            for (int i = 1; i <= totalKeys; i += 2) {
+            	bpt.put (i, i * i);
+            System.out.println("KEY VALUE PAIR IS: " + i + " " + i*i); 
+            }
+            
         } // if
 
         bpt.print (bpt.root, 0);
-        for (int i = 0; i <= totalKeys; i++) {
+        for (int i = 0; i <= totalKeys; i++) 
+        {
             out.println ("key = " + i + " value = " + bpt.get (i));
         } // for
         out.println ("-------------------------------------------");
         out.println ("Average number of nodes accessed = " + bpt.count / (double) totalKeys);
+        
+        Integer x = 5;    
+        
+        bpt.print (bpt.root, 0);
+
+        
+        //bpt.insert(x, ref, n); 
+        
+        Set <Map.Entry <Integer, Integer>> set = bpt.entrySet();
+        System.out.println("SET: " + set);
+        
+        System.out.println("SIZE: " + bpt.size());
+        Object firstKey = bpt.firstKey();
+        Object lastKey = bpt.lastKey();
+        System.out.println("FIRSTKEY: " + firstKey);
+        System.out.println("LASTKEY: " + lastKey);
+        
+        //headmap 
+		SortedMap<Integer, Integer> hm = bpt.headMap(20);
+		System.out.println("HeadMap: ");
+		
+		for(Map.Entry<Integer, Integer> e : hm.entrySet())
+			System.out.println(e.getKey() + " = " + e.getValue());
+
+		
+        //submap 
+		SortedMap<Integer, Integer> sm = bpt.subMap(0,20);
+		System.out.println("SubMap: ");
+		
+		for(Map.Entry<Integer, Integer> g : sm.entrySet())
+			System.out.println(g.getKey() + " = " + g.getValue());
+
+        //tailmap 
+		SortedMap<Integer, Integer> tm = bpt.tailMap(5);
+		System.out.println("TailMap: ");
+		
+		for(Map.Entry<Integer, Integer> f : tm.entrySet())
+			System.out.println(f.getKey() + " = " + f.getValue());
     } // main
 
 } // BpTreeMap class
-
